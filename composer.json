@@ -1,0 +1,13 @@
+{
+    "name": "vendor/framework",
+    "description": "my api for images",
+    "authors": [
+        {
+            "name": "Oleg Vyazovoy",
+            "email": "vyazovoy.oleg@gmail.com"
+        }
+    ],
+    "require": {
+        "phalcon/devtools": "dev-master"
+    }
+}
