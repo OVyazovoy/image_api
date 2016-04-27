@@ -15,6 +15,13 @@ $app->get('/', function () use ($app) {
 
 //add image
 $app->post('/api/image', function () use ($app) {
+    //upload file
+    if ($this->request->hasFiles() == true) {
+        //Print the real file names and their sizes
+        foreach ($this->request->getUploadedFiles() as $file){ //TODO check dir exist
+            $file->moveTo('files/'.$file->getName());//TODO check file type
+        }
+    }
     $request = $app->request->getJsonRawBody();
     //new image
     $image = new Images();
@@ -76,6 +83,44 @@ $app->delete('/api/image/{id}', function ($id) use ($app) {
         }
     }
 
+    return $response;
+});
+
+$app->put('/api/image/{id}', function($id) use ($app) {
+    $request = $app->request->getJsonRawBody();
+    $response = new Response();
+    $errors = '';
+    $images = Images::findById($id); //TODO need to check if id is mongo object id
+    if (!$images) {
+        $response->setStatusCode(409, "Conflict");
+        $errors = 'Illegal request. No such image in database.';
+        $response->setJsonContent(
+            [
+                'status' => 'ERROR',
+                'messages' => $errors,
+            ]
+        );
+    } else {
+        $images->name = $request->name;
+        if ($images->update() == false) {
+            foreach ($images->getMessages() as $message) {
+                $errors[] = $message;
+            }
+            $response->setJsonContent(
+                [
+                    'status' => 'ERROR',
+                    'messages' => $errors,
+                ]
+            );
+        } else {
+            $response->setJsonContent(
+                [
+                    'status' => 'OK',
+                    'messages' => "The robot was update successfully!",
+                ]
+            );
+        }
+    }
     return $response;
 });
 
