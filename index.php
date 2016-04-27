@@ -1,6 +1,7 @@
 <?php
 require_once 'config\main.php';
 require_once 'Collections\Images.php';
+require_once 'Services\ImageService.php';
 
 use \Collections\Images;
 use Phalcon\Mvc\Micro;
@@ -15,20 +16,63 @@ $app->get('/', function () use ($app) {
 
 //add image
 $app->post('/api/image', function () use ($app) {
+    $default_path = 'files/';
+    $request = new \Phalcon\Http\Request();
+    $response = new Response();
+
+    $img_width = $request->getPost("width");
+    $img_height = $request->getPost("height");
+    if (!isset($img_width) || !isset($img_height) || $img_width < 0 || $img_height < 0) {
+        $response->setStatusCode(400, "Wrong Data");
+        return $response;
+    }
+
     //upload file
     if ($this->request->hasFiles() == true) {
         //Print the real file names and their sizes
-        foreach ($this->request->getUploadedFiles() as $file){ //TODO check dir exist
-            $file->moveTo('files/'.$file->getName());//TODO check file type
+        foreach ($this->request->getUploadedFiles() as $file) { //TODO check dir exist
+            $file_name = $file->getName();
+            $file->moveTo($default_path . $file_name);//TODO check file type
+            $file_path = $default_path . $file_name;
         }
+    } else {
+        $response->setStatusCode(400, "Wrong Data");
+        return $response;
     }
-    $request = $app->request->getJsonRawBody();
-    //new image
-    $image = new Images();
-    $image->name = $request->name;
-    $response = $image->save();
 
-    return json_encode($response);
+    $image_service = new ImageService($file_path);
+    $image_service->resize($img_width, $img_height);
+    $resize_image_path = $default_path . $img_width . 'x' . $img_height . $file_name;
+    $resize_result = $image_service->save($resize_image_path);
+    if ($resize_result) {
+        //new image
+        $image = new Images();
+        $image->origin_path = $file_path;
+        $image->width = $img_width;
+        $image->height = $img_height;
+        $image->resize_image_path = $resize_image_path;
+        $save_image_db = $image->save();
+        if ($save_image_db) {
+            //set response
+            $res_status = 'OK';
+            $res_message = $image;
+        } else {
+            $response->setStatusCode(400, "Bad Request");
+            $res_status = 'Error';
+            $res_message = 'Can`t save to database';
+        }
+    } else {
+        $response->setStatusCode(400, "Bad Request");
+        $res_status = 'Error';
+        $res_message = 'Can`t resize image';
+    }
+    $response->setJsonContent(
+        [
+            'status' => $res_status,
+            'messages' => $res_message,
+        ]
+    );
+    return $response;
 });
 
 //get all images
@@ -46,7 +90,6 @@ $app->get('/api/images', function () use ($app) {
     return $response;
 });
 
-//
 $app->delete('/api/image/{id}', function ($id) use ($app) {
     // set response
     $response = new Response();
@@ -86,7 +129,7 @@ $app->delete('/api/image/{id}', function ($id) use ($app) {
     return $response;
 });
 
-$app->put('/api/image/{id}', function($id) use ($app) {
+$app->put('/api/image/{id}', function ($id) use ($app) {
     $request = $app->request->getJsonRawBody();
     $response = new Response();
     $errors = '';
