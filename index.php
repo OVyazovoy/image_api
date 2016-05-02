@@ -1,5 +1,6 @@
 <?php
 require_once 'config\main.php';
+require_once 'components\Constants.php';
 require_once 'Collections\Images.php';
 require_once 'Services\ImageService.php';
 
@@ -16,7 +17,6 @@ $app->get('/', function () use ($app) {
 
 //add image
 $app->post('/api/image', function () use ($app) {
-    $default_path = 'files/';
     $request = new \Phalcon\Http\Request();
     $response = new Response();
 
@@ -30,10 +30,15 @@ $app->post('/api/image', function () use ($app) {
     //upload file
     if ($this->request->hasFiles() == true) {
         //Print the real file names and their sizes
-        foreach ($this->request->getUploadedFiles() as $file) { //TODO check dir exist
-            $file_name = $file->getName();
-            $file->moveTo($default_path . $file_name);//TODO check file type
-            $file_path = $default_path . $file_name;
+        if(ImageService::checkDirExist(Constants::DEF_PATH)){
+            foreach ($this->request->getUploadedFiles() as $file) {
+                $file_name = $file->getName();
+                $file_path = ImageService::saveOrigin($file);
+                if(!$file_path){
+                    $response->setStatusCode(400, "Wrong Data");
+                    return $response;
+                }
+            }
         }
     } else {
         $response->setStatusCode(400, "Wrong Data");
@@ -42,7 +47,7 @@ $app->post('/api/image', function () use ($app) {
 
     $image_service = new ImageService($file_path);
     $image_service->resize($img_width, $img_height);
-    $resize_image_path = $default_path . $img_width . 'x' . $img_height . $file_name;
+    $resize_image_path = Constants::DEF_PATH . '/'. $img_width . 'x' . $img_height . $file_name;
     $resize_result = $image_service->save($resize_image_path);
     if ($resize_result) {
         //new image

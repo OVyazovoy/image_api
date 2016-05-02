@@ -1,4 +1,5 @@
 <?php
+//namespace Services;
 
 /**
  * Created by PhpStorm.
@@ -60,15 +61,46 @@ class ImageService
     public function resize($width, $height)
     {
         $new_image = imagecreatetruecolor($width, $height);//create empty image
-        if($width == 0){
+        if ($width == 0) {
             $width = $this->getWidth();
         }
-        if($height == 0){
+        if ($height == 0) {
             $width = $this->getHeight();
         }
-        imagecopyresampled($new_image, $this->image, 0, 0, 0, 0, $width, $height, $this->getWidth(), $this->getHeight());
-        var_dump($this->getWidth());die;
-        $this->file = $new_image;
+        imagecopyresampled($new_image, $this->image, $width, $height, 0, 0, $width, $height, $this->getWidth(), $this->getHeight());
+        $this->image = $new_image;
     }
 
+    /**
+     * check dir exist if not create it
+     * @param $dir
+     * @return bool
+     */
+    public static function checkDirExist($dir)
+    {
+        if (!is_dir($dir)) {
+            return mkdir($dir);
+        }
+        return true;
+    }
+
+    public static function saveOrigin($file)
+    {
+        $file_name = $file->getName();
+        $file_type = $file->getType();
+
+        if (self::trueType($file_type)) {
+            $move_result = $file->moveTo(Constants::DEF_PATH . '/' . $file_name);
+            if ($move_result) {
+                return Constants::DEF_PATH . '/' . $file_name;
+            }
+        }
+
+        return false;
+    }
+
+    protected function trueType($type)
+    {
+        return in_array($type, Constants::confirmTypes());
+    }
 }
