@@ -15,7 +15,9 @@ $app->get('/', function () use ($app) {
     echo "<h1>All work</h1>";
 });
 
-//add image
+/**
+ * add one image
+ */
 $app->post('/api/image', function () use ($app) {
     $request = new \Phalcon\Http\Request();
     $response = new Response();
@@ -30,14 +32,12 @@ $app->post('/api/image', function () use ($app) {
     //upload file
     if ($this->request->hasFiles() == true) {
         //Print the real file names and their sizes
-        if(ImageService::checkDirExist(Constants::DEF_PATH)){
-            foreach ($this->request->getUploadedFiles() as $file) {
-                $file_name = $file->getName();
-                $file_path = ImageService::saveOrigin($file);
-                if(!$file_path){
-                    $response->setStatusCode(400, "Wrong Data");
-                    return $response;
-                }
+        foreach ($this->request->getUploadedFiles() as $file) {
+            $file_name = $file->getName();
+            $file_path = ImageService::saveOrigin($file);
+            if(!$file_path){
+                $response->setStatusCode(400, "Wrong Data");
+                return $response;
             }
         }
     } else {
@@ -80,7 +80,9 @@ $app->post('/api/image', function () use ($app) {
     return $response;
 });
 
-//get all images
+/**
+ * get all images
+ */
 $app->get('/api/images', function () use ($app) {
     $response = new Response();
 
@@ -95,81 +97,77 @@ $app->get('/api/images', function () use ($app) {
     return $response;
 });
 
+/**
+ * delete one image
+ */
 $app->delete('/api/image/{id}', function ($id) use ($app) {
     // set response
     $response = new Response();
-    $errors = '';
-    $images = Images::findById($id); //TODO need to check if id is mongo object id
+    $msg = '';
+    $status = 'ERROR';
+    $image = ImageService::returnImage($id);
+
+    //TODO need to check if id is mongo object id
     //if image with this id not found
-    if (!$images) {
+    if (!$image) {
         $response->setStatusCode(409, "Conflict");
-        $errors = 'Illegal request. No such image in database.';
-        $response->setJsonContent(
-            [
-                'status' => 'ERROR',
-                'messages' => $errors,
-            ]
-        );
+        $msg = 'Illegal request. No such image in database.';
     } else {
-        if ($images->delete() == false) {
-            foreach ($images->getMessages() as $message) {
-                $errors[] = $message;
+        if ($image->delete() == false) {
+            foreach ($image->getMessages() as $message) {
+                $msg[] = $message;
             }
-            $response->setJsonContent(
-                [
-                    'status' => 'ERROR',
-                    'messages' => $errors,
-                ]
-            );
         } else {
-            $response->setJsonContent(
-                [
-                    'status' => 'OK',
-                    'messages' => "The robot was deleted successfully!",
-                ]
-            );
+            $status = 'OK';
+            $msg = 'The image was deleted successfully!';
         }
     }
+
+    $response->setJsonContent(
+        [
+            'status' => $status,
+            'messages' => $msg,
+        ]
+    );
 
     return $response;
 });
 
+/**
+ * update one image
+ */
 $app->put('/api/image/{id}', function ($id) use ($app) {
     $request = $app->request->getJsonRawBody();
     $response = new Response();
-    $errors = '';
-    $images = Images::findById($id); //TODO need to check if id is mongo object id
-    if (!$images) {
+    $msg = '';
+    $status = 'ERROR';
+    $image = ImageService::returnImage($id);
+    if (!$image) {
         $response->setStatusCode(409, "Conflict");
-        $errors = 'Illegal request. No such image in database.';
-        $response->setJsonContent(
-            [
-                'status' => 'ERROR',
-                'messages' => $errors,
-            ]
-        );
+        $msg = 'Illegal request. No such image in database.';
     } else {
-        $images->name = $request->name;
-        if ($images->update() == false) {
-            foreach ($images->getMessages() as $message) {
-                $errors[] = $message;
+        $image->name = $request->name;
+        if ($image->update() == false) {
+            foreach ($image->getMessages() as $message) {
+                $msg[] = $message;
             }
-            $response->setJsonContent(
-                [
-                    'status' => 'ERROR',
-                    'messages' => $errors,
-                ]
-            );
         } else {
-            $response->setJsonContent(
-                [
-                    'status' => 'OK',
-                    'messages' => "The robot was update successfully!",
-                ]
-            );
+            $status = "OK";
+            $msg = "The image was update successfully!";
         }
     }
+
+    $response->setJsonContent(
+        [
+            'status' => $status,
+            'messages' => $msg,
+        ]
+    );
     return $response;
 });
+
+//TODO multi delete
+//TODO multi update
+//TODO multi add
 
 $app->handle();
