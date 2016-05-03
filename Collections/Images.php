@@ -7,20 +7,8 @@ namespace Collections;
  * Time: 16:55
  */
 
-use Phalcon\Mvc\Collection;
-class Images extends Collection
+class Images extends Model
 {
-    public function beforeCreate()
-    {
-        // Set the creation date
-        $this->created_at = date('Y-m-d H:i:s');
-    }
-    public function beforeUpdate()
-    {
-        // Set the modification date
-        $this->modified_in = date('Y-m-d H:i:s');
-    }
-
     public function getSource()
     {
         return "images";
